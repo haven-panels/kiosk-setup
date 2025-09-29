@@ -74,10 +74,19 @@ user-session=openbox
 greeter-session=unity-greeter
 EOF
 
-# Also configure in main lightdm.conf as backup
-sudo sed -i "s/#autologin-user=/autologin-user=$KIOSK_USER/" /etc/lightdm/lightdm.conf
-sudo sed -i "s/#autologin-user-timeout=0/autologin-user-timeout=0/" /etc/lightdm/lightdm.conf
-sudo sed -i "s/#user-session=default/user-session=openbox/" /etc/lightdm/lightdm.conf
+# Also configure in main lightdm.conf as backup (create if doesn't exist)
+if [[ ! -f /etc/lightdm/lightdm.conf ]]; then
+    sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOF
+[Seat:*]
+autologin-user=$KIOSK_USER
+autologin-user-timeout=0
+user-session=openbox
+EOF
+else
+    sudo sed -i "s/#autologin-user=/autologin-user=$KIOSK_USER/" /etc/lightdm/lightdm.conf
+    sudo sed -i "s/#autologin-user-timeout=0/autologin-user-timeout=0/" /etc/lightdm/lightdm.conf
+    sudo sed -i "s/#user-session=default/user-session=openbox/" /etc/lightdm/lightdm.conf
+fi
 
 echo
 echo "=== Creating openbox configuration ==="
