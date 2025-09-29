@@ -40,6 +40,11 @@ if ! id "kiosk" &>/dev/null; then
 else
     echo "Kiosk user already exists"
 fi
+
+# Ensure home directory exists and has proper permissions
+sudo mkdir -p /home/kiosk
+sudo chown kiosk:kiosk /home/kiosk
+sudo chmod 755 /home/kiosk
 echo
 echo "=== Updating system packages ==="
 sudo apt update && sudo apt upgrade -y
