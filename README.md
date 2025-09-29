@@ -17,13 +17,7 @@ Specify the kiosk URL directly:
 curl -fsSL https://raw.githubusercontent.com/haven-panels/kiosk-setup/main/setup-kiosk.sh | bash -s -- "https://havenpanels.com"
 ```
 
-What it does
-
-Installs minimal Ubuntu desktop environment
-Configures auto-login and kiosk mode
-Sets up Chromium browser in fullscreen
-Includes recovery mechanisms for reliability
-Optional SSH server for remote management
+Exit by alt-tab and killing the terminal
 
 Requirements
 
