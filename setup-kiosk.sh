@@ -64,7 +64,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt install -y \
 
 echo
 echo "=== Configuring auto-login ==="
-# Configure LightDM for auto-login
+# Configure LightDM for auto-login (after lightdm is installed)
 sudo mkdir -p /etc/lightdm/lightdm.conf.d
 sudo tee /etc/lightdm/lightdm.conf.d/10-kiosk.conf > /dev/null <<EOF
 [Seat:*]
@@ -91,10 +91,10 @@ fi
 echo
 echo "=== Creating openbox configuration ==="
 # Create openbox config directory
-mkdir -p /home/$KIOSK_USER/.config/openbox
+sudo mkdir -p /home/$KIOSK_USER/.config/openbox
 
 # Create openbox menu (minimal)
-cat > /home/$KIOSK_USER/.config/openbox/menu.xml <<EOF
+sudo tee /home/$KIOSK_USER/.config/openbox/menu.xml > /dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_menu xmlns="http://openbox.org/3.4/menu">
   <menu id="root-menu" label="Openbox 3">
@@ -108,7 +108,7 @@ cat > /home/$KIOSK_USER/.config/openbox/menu.xml <<EOF
 EOF
 
 # Create openbox rc.xml config
-cat > /home/$KIOSK_USER/.config/openbox/rc.xml <<EOF
+sudo tee /home/$KIOSK_USER/.config/openbox/rc.xml > /dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc" xmlns:xi="http://www.w3.org/2001/XInclude">
   <resistance>
@@ -234,7 +234,7 @@ cat > /home/$KIOSK_USER/.config/openbox/rc.xml <<EOF
 EOF
 
 # Create openbox autostart script
-cat > /home/$KIOSK_USER/.config/openbox/autostart <<EOF
+sudo tee /home/$KIOSK_USER/.config/openbox/autostart > /dev/null <<EOF
 #!/bin/bash
 
 # Wait for X to be ready
@@ -276,8 +276,8 @@ chromium-browser \\
 EOF
 
 # Make autostart executable and set proper ownership
-chmod +x /home/$KIOSK_USER/.config/openbox/autostart
-chown -R $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.config/
+sudo chmod +x /home/$KIOSK_USER/.config/openbox/autostart
+sudo chown -R $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.config/
 
 # Create .desktop file for openbox session
 sudo mkdir -p /usr/share/xsessions
@@ -291,9 +291,9 @@ Comment=Log in using the Openbox window manager (without a panel)
 EOF
 
 # Create .xsession as fallback
-echo "exec openbox-session" > /home/$KIOSK_USER/.xsession
-chmod +x /home/$KIOSK_USER/.xsession
-chown $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.xsession
+echo "exec openbox-session" | sudo tee /home/$KIOSK_USER/.xsession > /dev/null
+sudo chmod +x /home/$KIOSK_USER/.xsession
+sudo chown $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.xsession
 
 echo
 echo "=== Creating browser refresh script ==="
