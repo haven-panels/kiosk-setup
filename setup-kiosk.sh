@@ -26,22 +26,36 @@ if [[ -z "$KIOSK_URL" ]]; then
 fi
 
 # Get username
-KIOSK_USER=$(whoami)
+KIOSK_USER="kiosk"
 echo "Setting up kiosk for user: $KIOSK_USER"
 
+echo
+echo "=== Creating kiosk user ==="
+# Create kiosk user if it doesn't exist
+if ! id "kiosk" &>/dev/null; then
+    sudo useradd -m -s /bin/bash kiosk
+    echo "kiosk:kiosk" | sudo chpasswd
+    sudo usermod -aG sudo kiosk
+    echo "Created kiosk user with password 'kiosk'"
+else
+    echo "Kiosk user already exists"
+fi
 echo
 echo "=== Updating system packages ==="
 sudo apt update && sudo apt upgrade -y
 
 echo
 echo "=== Installing minimal desktop environment ==="
-# Install minimal desktop environment
-sudo apt install -y ubuntu-desktop-minimal
+# Install minimal desktop environment with non-interactive frontend
+sudo DEBIAN_FRONTEND=noninteractive apt install -y ubuntu-desktop-minimal
 
 echo
 echo "=== Installing additional packages ==="
+# Pre-configure lightdm selection to avoid TUI prompt
+echo "lightdm lightdm/default-x-display-manager select lightdm" | sudo debconf-set-selections
+
 # Install required packages
-sudo apt install -y \
+sudo DEBIAN_FRONTEND=noninteractive apt install -y \
     chromium-browser \
     unclutter \
     x11-xserver-utils \
@@ -51,21 +65,171 @@ sudo apt install -y \
 echo
 echo "=== Configuring auto-login ==="
 # Configure LightDM for auto-login
+sudo mkdir -p /etc/lightdm/lightdm.conf.d
 sudo tee /etc/lightdm/lightdm.conf.d/10-kiosk.conf > /dev/null <<EOF
 [Seat:*]
 autologin-user=$KIOSK_USER
 autologin-user-timeout=0
 user-session=openbox
+greeter-session=unity-greeter
 EOF
+
+# Also configure in main lightdm.conf as backup
+sudo sed -i "s/#autologin-user=/autologin-user=$KIOSK_USER/" /etc/lightdm/lightdm.conf
+sudo sed -i "s/#autologin-user-timeout=0/autologin-user-timeout=0/" /etc/lightdm/lightdm.conf
+sudo sed -i "s/#user-session=default/user-session=openbox/" /etc/lightdm/lightdm.conf
 
 echo
 echo "=== Creating openbox configuration ==="
 # Create openbox config directory
 mkdir -p /home/$KIOSK_USER/.config/openbox
 
+# Create openbox menu (minimal)
+cat > /home/$KIOSK_USER/.config/openbox/menu.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+  <menu id="root-menu" label="Openbox 3">
+    <item label="Exit">
+      <action name="Exit">
+        <prompt>yes</prompt>
+      </action>
+    </item>
+  </menu>
+</openbox_menu>
+EOF
+
+# Create openbox rc.xml config
+cat > /home/$KIOSK_USER/.config/openbox/rc.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <resistance>
+    <strength>10</strength>
+    <screen_edge_strength>20</screen_edge_strength>
+  </resistance>
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+    <underMouse>no</underMouse>
+    <focusDelay>200</focusDelay>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+  <placement>
+    <policy>Smart</policy>
+    <center>yes</center>
+    <monitor>Primary</monitor>
+    <primaryMonitor>1</primaryMonitor>
+  </placement>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <keepBorder>yes</keepBorder>
+    <animateIconify>yes</animateIconify>
+    <font place="ActiveWindow">
+      <name>sans</name>
+      <size>8</size>
+      <weight>bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="InactiveWindow">
+      <name>sans</name>
+      <size>8</size>
+      <weight>bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="MenuHeader">
+      <name>sans</name>
+      <size>9</size>
+      <weight>normal</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="MenuItem">
+      <name>sans</name>
+      <size>9</size>
+      <weight>normal</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="ActiveOnScreenDisplay">
+      <name>sans</name>
+      <size>9</size>
+      <weight>bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="InactiveOnScreenDisplay">
+      <name>sans</name>
+      <size>9</size>
+      <weight>bold</weight>
+      <slant>normal</slant>
+    </font>
+  </theme>
+  <desktops>
+    <number>1</number>
+    <firstdesk>1</firstdesk>
+    <names>
+      <name>Kiosk</name>
+    </names>
+    <popupTime>875</popupTime>
+  </desktops>
+  <resize>
+    <drawContents>yes</drawContents>
+    <popupShow>Nonpixel</popupShow>
+    <popupPosition>Center</popupPosition>
+    <popupFixedPosition>
+      <x>10</x>
+      <y>10</y>
+    </popupFixedPosition>
+  </resize>
+  <margins>
+    <top>0</top>
+    <bottom>0</bottom>
+    <left>0</left>
+    <right>0</right>
+  </margins>
+  <dock>
+    <position>TopLeft</position>
+    <floatingX>0</floatingX>
+    <floatingY>0</floatingY>
+    <noStrut>no</noStrut>
+    <stacking>Above</stacking>
+    <direction>Vertical</direction>
+    <autoHide>no</autoHide>
+    <hideDelay>300</hideDelay>
+    <showDelay>300</showDelay>
+    <moveButton>Middle</moveButton>
+  </dock>
+  <keyboard>
+    <chainQuitKey>C-g</chainQuitKey>
+  </keyboard>
+  <mouse>
+    <dragThreshold>1</dragThreshold>
+    <doubleClickTime>500</doubleClickTime>
+    <screenEdgeWarpTime>400</screenEdgeWarpTime>
+    <screenEdgeWarpMouse>false</screenEdgeWarpMouse>
+  </mouse>
+  <menu>
+    <file>menu.xml</file>
+    <hideDelay>200</hideDelay>
+    <middle>no</middle>
+    <submenuShowDelay>100</submenuShowDelay>
+    <submenuHideDelay>400</submenuHideDelay>
+    <applicationIcons>yes</applicationIcons>
+    <manageDesktops>yes</manageDesktops>
+  </menu>
+  <applications>
+    <application class="*">
+      <decor>no</decor>
+      <maximized>true</maximized>
+    </application>
+  </applications>
+</openbox_config>
+EOF
+
 # Create openbox autostart script
 cat > /home/$KIOSK_USER/.config/openbox/autostart <<EOF
 #!/bin/bash
+
+# Wait for X to be ready
+sleep 2
 
 # Disable screen saver and power management
 xset s off
@@ -74,6 +238,9 @@ xset s noblank
 
 # Hide cursor after inactivity
 unclutter -idle 0.1 &
+
+# Wait a bit more
+sleep 3
 
 # Remove window decorations and start browser in kiosk mode
 chromium-browser \\
@@ -96,11 +263,28 @@ chromium-browser \\
     --window-size=1920,1080 \\
     --no-sandbox \\
     --disable-web-security \\
-    "$KIOSK_URL"
+    "$KIOSK_URL" &
 EOF
 
-# Make autostart executable
+# Make autostart executable and set proper ownership
 chmod +x /home/$KIOSK_USER/.config/openbox/autostart
+chown -R $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.config/
+
+# Create .desktop file for openbox session
+sudo mkdir -p /usr/share/xsessions
+sudo tee /usr/share/xsessions/openbox.desktop > /dev/null <<EOF
+[Desktop Entry]
+Type=Application
+Exec=openbox-session
+TryExec=openbox-session
+Name=Openbox
+Comment=Log in using the Openbox window manager (without a panel)
+EOF
+
+# Create .xsession as fallback
+echo "exec openbox-session" > /home/$KIOSK_USER/.xsession
+chmod +x /home/$KIOSK_USER/.xsession
+chown $KIOSK_USER:$KIOSK_USER /home/$KIOSK_USER/.xsession
 
 echo
 echo "=== Creating browser refresh script ==="
