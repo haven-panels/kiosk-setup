@@ -15,11 +15,14 @@ if [[ $EUID -eq 0 ]]; then
    exit 1
 fi
 
-# Get kiosk URL from user
-read -p "Enter the URL to display in kiosk mode: " KIOSK_URL
+# Get kiosk URL from command line argument or user input
+KIOSK_URL="$1"
 if [[ -z "$KIOSK_URL" ]]; then
-    echo "No URL provided. Exiting."
-    exit 1
+    read -p "Enter the URL to display in kiosk mode: " KIOSK_URL </dev/tty
+    if [[ -z "$KIOSK_URL" ]]; then
+        echo "No URL provided. Exiting."
+        exit 1
+    fi
 fi
 
 # Get username
@@ -141,7 +144,7 @@ echo "To exit kiosk mode, press Ctrl+Alt+F1 to get to a terminal"
 
 echo
 echo "=== Setting up SSH for remote management (recommended) ==="
-read -p "Do you want to install SSH server for remote management? (y/n): " INSTALL_SSH
+read -p "Do you want to install SSH server for remote management? (y/n): " INSTALL_SSH </dev/tty
 if [[ $INSTALL_SSH =~ ^[Yy]$ ]]; then
     sudo apt install -y openssh-server
     sudo systemctl enable ssh
@@ -190,7 +193,7 @@ echo "- Return to kiosk: Ctrl+Alt+F7"
 echo "- Edit kiosk URL: Edit /home/$KIOSK_USER/.config/openbox/autostart"
 echo
 echo "Ready to reboot? (y/n)"
-read -p "> " REBOOT_NOW
+read -p "> " REBOOT_NOW </dev/tty
 if [[ $REBOOT_NOW =~ ^[Yy]$ ]]; then
     sudo reboot
 else
